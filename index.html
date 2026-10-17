@@ -298,7 +298,7 @@
       padding: 25px;
       border-radius: 12px;
       text-align: center;
-      max-width: 340px;
+      max-width: 360px;
       width: 90%;
     }
     .modal-content p {
@@ -323,7 +323,7 @@
   <div id="start-screen">
     <div class="start-card">
       <h2>💴 일본 화폐 정리 게임</h2>
-      <p>바닥에 흩어진 일본 화폐를 종류별로 모아요! 화폐를 센 후 금액을 입력하고, 일본어로 어떻게 읽는지 입력하세요. 행운을 빕니다. がんばって！</p>
+      <p>바닥에 흩어진 일본 화폐를 종류별로 모으고 총액을 입력한 후 일본어로 입력하세요. 행운을 빕니다. がんばって！</p>
       <button class="start-btn" onclick="startGame()">スタート</button>
     </div>
   </div>
@@ -353,9 +353,9 @@
       <span class="unit-text">円(えん)</span>
     </div>
     
-    <!-- 일본어 입력 (요청하신 구문 수정) -->
+    <!-- 일본어 입력 -->
     <div class="input-group">
-      <input type="text" id="user-japanese" placeholder="일본어 입력">
+      <input type="text" id="user-japanese" placeholder="히라가나 입력">
       <span class="unit-text">円（えん）に なります。</span>
     </div>
 
@@ -420,7 +420,7 @@
       document.getElementById('user-japanese').value = '';
       document.getElementById('result-modal').style.display = 'none';
 
-      // 1. Drop Zone 생성 (카운터 제거됨)
+      // Drop Zone 생성
       DENOMINATIONS.forEach(denom => {
         const zone = document.createElement('div');
         zone.className = 'zone';
@@ -434,7 +434,7 @@
         dropZonesContainer.appendChild(zone);
       });
 
-      // 2. 화폐 목록 생성 (10종류 모두 1개 이상 무조건 포함)
+      // 10종류 기본 화폐 포함
       let moneyList = [...DENOMINATIONS];
       const extraCount = Math.floor(Math.random() * 8) + 5;
 
@@ -444,7 +444,7 @@
 
       totalItemCount = moneyList.length;
 
-      // 화폐 화면에 배치
+      // 화폐 화면 배치
       moneyList.forEach(denom => {
         totalAmount += denom.value;
 
@@ -473,6 +473,77 @@
       });
 
       startTimer();
+    }
+
+    /* 일본어 표준 독음 엄격 적용 함수 (4:よん, 7:なな, 9:きゅう, 10,000:いちまん 외 음편 완전 검증) */
+    function numberToJapaneseHiragana(num) {
+      if (num === 0) return "";
+
+      const units = ["", "いち", "に", "さん", "よん", "ご", "ろく", "なな", "はち", "きゅう"];
+      let result = "";
+
+      // 1. 만 단위 (万) -> 1만: いちまん / 4만: よんまん / 7만: ななまん / 9만: きゅうまん
+      const man = Math.floor(num / 10000);
+      let rem = num % 10000;
+
+      if (man > 0) {
+        if (man === 1) result += "いちまん";
+        else if (man === 4) result += "よんまん";
+        else if (man === 7) result += "ななまん";
+        else if (man === 9) result += "きゅうまん";
+        else result += units[man] + "まん";
+      }
+
+      // 2. 천 단위 (千) -> 1천: せん / 3천: さんぜん / 4천: よんせん / 7천: ななせん / 8천: はっせん / 9천: きゅうせん
+      const sen = Math.floor(rem / 1000);
+      rem = rem % 1000;
+
+      if (sen > 0) {
+        if (sen === 1) result += "せん";
+        else if (sen === 3) result += "さんぜん";
+        else if (sen === 4) result += "よんせん";
+        else if (sen === 7) result += "ななせん";
+        else if (sen === 8) result += "はっせん";
+        else if (sen === 9) result += "きゅうせん";
+        else result += units[sen] + "せん";
+      }
+
+      // 3. 백 단위 (百) -> 1백: ひゃく / 3백: さんびゃく / 4백: よんひゃく / 6백: ろっぴゃく / 7백: ななひゃく / 8백: はっぴゃく / 9백: きゅうひゃく
+      const hyaku = Math.floor(rem / 100);
+      rem = rem % 100;
+
+      if (hyaku > 0) {
+        if (hyaku === 1) result += "ひゃく";
+        else if (hyaku === 3) result += "さんびゃく";
+        else if (hyaku === 4) result += "よんひゃく";
+        else if (hyaku === 6) result += "ろっぴゃく";
+        else if (hyaku === 7) result += "ななひゃく";
+        else if (hyaku === 8) result += "はっぴゃく";
+        else if (hyaku === 9) result += "きゅうひゃく";
+        else result += units[hyaku] + "ひゃく";
+      }
+
+      // 4. 십 단위 (十) -> 4십: よんじゅう / 7십: ななじゅう / 9십: きゅうじゅう
+      const ju = Math.floor(rem / 10);
+      const sho = rem % 10;
+
+      if (ju > 0) {
+        if (ju === 1) result += "じゅう";
+        else if (ju === 4) result += "よんじゅう";
+        else if (ju === 7) result += "ななじゅう";
+        else if (ju === 9) result += "きゅうじゅう";
+        else result += units[ju] + "じゅう";
+      }
+
+      // 5. 일 단위 -> 4: よん / 7: なな / 9: きゅう
+      if (sho > 0) {
+        if (sho === 4) result += "よん";
+        else if (sho === 7) result += "なな";
+        else if (sho === 9) result += "きゅう";
+        else result += units[sho];
+      }
+
+      return result;
     }
 
     function startTimer() {
@@ -569,34 +640,47 @@
 
     function checkAnswer() {
       const userValue = parseInt(document.getElementById('user-total').value, 10);
-      const userJpText = document.getElementById('user-japanese').value.trim();
+      const userJpText = document.getElementById('user-japanese').value.replace(/\s+/g, '').trim();
       const sortedCount = document.querySelectorAll('.money.in-zone').length;
 
+      // 1. 화폐 정리 검증
       if (sortedCount < totalItemCount) {
         alert('아직 정리하지 않은 화폐가 남아있습니다! 화면의 모든 화폐를 알맞은 상자에 정리해주세요.');
         return;
       }
 
+      // 2. 숫자 금액 검증
       if (isNaN(userValue) || userValue === 0) {
         alert('총 금액을 숫자로 입력해주세요.');
         return;
       }
 
-      if (userValue === totalAmount) {
-        stopTimer();
-        const clearTime = timerDisplay.innerText;
-        
-        document.getElementById('modal-time').innerText = `⏱️ 클리어 시간: ${clearTime}`;
-        if (userJpText) {
-          document.getElementById('modal-jp-text').innerText = `📝 입력한 일본어: ${userJpText}円（えん）に なります。`;
-        } else {
-          document.getElementById('modal-jp-text').innerText = ``;
-        }
-
-        document.getElementById('result-modal').style.display = 'flex';
-      } else {
-        alert('입력한 금액이 정확하지 않습니다. 다시 계산해 보세요!');
+      if (userValue !== totalAmount) {
+        alert('입력한 숫자 금액이 정확하지 않습니다. 다시 계산해 보세요!');
+        return;
       }
+
+      // 3. 일본 표준 독음 히라가나 검증
+      const correctHiragana = numberToJapaneseHiragana(totalAmount);
+
+      if (!userJpText) {
+        alert('일본어(히라가나) 읽기도 입력해주세요!');
+        return;
+      }
+
+      if (userJpText !== correctHiragana) {
+        alert(`일본어 발음 표기가 올바르지 않습니다.\n\n표준 정답 예시: ${correctHiragana}`);
+        return;
+      }
+
+      // 4. 성공 시 클리어
+      stopTimer();
+      const clearTime = timerDisplay.innerText;
+      
+      document.getElementById('modal-time').innerText = `⏱️ 클리어 시간: ${clearTime}`;
+      document.getElementById('modal-jp-text').innerText = `📝 입력한 일본어: ${correctHiragana}円（えん）に なります。`;
+
+      document.getElementById('result-modal').style.display = 'flex';
     }
 
     function resetGame() {
