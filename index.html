@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>일본 화폐 정리 게임</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+    }
+    body {
+      margin: 0;
+      padding: 15px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f8fafc;
+      background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+      background-size: 20px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      position: relative;
+    }
+
+    /* 시작 화면 모달 */
+    #start-screen {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.85);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      padding: 20px;
+    }
+    .start-card {
+      background: #ffffff;
+      padding: 30px 25px;
+      border-radius: 16px;
+      text-align: center;
+      max-width: 450px;
+      width: 100%;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .start-card h2 {
+      margin-top: 0;
+      color: #1e293b;
+      font-size: 1.5rem;
+    }
+    .start-card p {
+      color: #475569;
+      line-height: 1.6;
+      font-size: 1.05rem;
+      margin: 20px 0;
+      word-break: keep-all;
+    }
+    .start-btn {
+      padding: 12px 36px;
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 30px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+      transition: transform 0.2s, background-color 0.2s;
+    }
+    .start-btn:hover {
+      background: #dc2626;
+      transform: translateY(-2px);
+    }
+
+    /* 배경 장식 */
+    .bg-decorations {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 1;
+      opacity: 0.15;
+      font-size: 2.5rem;
+    }
+    .bg-icon { position: absolute; }
+
+    h1 {
+      margin: 5px 0;
+      font-size: 1.5rem;
+      color: #1e293b;
+      z-index: 2;
+    }
+    #status-bar {
+      display: flex;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 10px;
+      background: #fff;
+      padding: 8px 20px;
+      border-radius: 20px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      z-index: 2;
+    }
+    #timer {
+      font-weight: bold;
+      color: #e63946;
+      font-size: 1.1rem;
+    }
+
+    /* 흩어진 화폐 영역 */
+    #play-field {
+      position: relative;
+      width: 100%;
+      max-width: 900px;
+      height: 280px;
+      background-color: rgba(255, 255, 255, 0.85);
+      border: 2px dashed #94a3b8;
+      border-radius: 12px;
+      margin-bottom: 15px;
+      z-index: 10;
+    }
+
+    .field-bg-symbols {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+      font-size: 4rem;
+      opacity: 0.08;
+      pointer-events: none;
+    }
+
+    /* drop zones */
+    #drop-zones {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      width: 100%;
+      max-width: 900px;
+      margin-bottom: 15px;
+      z-index: 5;
+    }
+    .zone {
+      background: #ffffff;
+      border: 2px solid #cbd5e1;
+      border-radius: 10px;
+      height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 6px;
+      position: relative;
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .zone-header {
+      display: flex;
+      justify-content: center;
+      width: 100%;
+      align-items: center;
+      margin-bottom: 4px;
+      padding: 0 2px;
+    }
+    .zone-label {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #334155;
+    }
+    .zone-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-wrap: wrap;
+      align-content: flex-start;
+      justify-content: center;
+      gap: 3px;
+      overflow-y: auto;
+      touch-action: pan-y;
+    }
+
+    /* Money Styling */
+    .money {
+      position: absolute;
+      cursor: grab;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: transform 0.1s ease;
+      border-radius: 50%;
+      line-height: 1.1;
+    }
+    .money:active {
+      cursor: grabbing;
+      transform: scale(1.15);
+    }
+    .money.in-zone {
+      position: relative !important;
+      left: auto !important;
+      top: auto !important;
+      transform: scale(0.65) !important;
+      margin: -6px -6px;
+    }
+
+    /* Coin Types */
+    .coin-1 { width: 44px; height: 44px; background: #e2e8f0; border: 2px solid #94a3b8; color: #334155; }
+    .coin-5 { width: 46px; height: 46px; background: #eab308; border: 2px solid #ca8a04; color: #422006; }
+    .coin-10 { width: 48px; height: 48px; background: #d97706; border: 2px solid #b45309; color: #fff; }
+    .coin-50 { width: 46px; height: 46px; background: #cbd5e1; border: 2px solid #64748b; color: #1e293b; }
+    .coin-100 { width: 50px; height: 50px; background: #f1f5f9; border: 2px solid #94a3b8; color: #0f172a; }
+    .coin-500 { width: 54px; height: 54px; background: #fef08a; border: 2px solid #eab308; color: #713f12; }
+
+    .coin-5::after, .coin-50::after { 
+      content: ''; width: 8px; height: 8px; background: #f8fafc; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); opacity: 0.7;
+    }
+
+    /* Bill Types */
+    .bill {
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.25);
+    }
+    .bill-1000 { width: 88px; height: 50px; background: #bfdbfe; color: #1e3a8a; }
+    .bill-2000 { width: 90px; height: 51px; background: #bbf7d0; color: #14532d; }
+    .bill-5000 { width: 93px; height: 52px; background: #e9d5ff; color: #581c87; }
+    .bill-10000 { width: 96px; height: 53px; background: #fecdd3; color: #881337; }
+
+    /* Controls & Modal */
+    #control-panel {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      justify-content: center;
+      background: #fff;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      width: 100%;
+      max-width: 900px;
+      z-index: 2;
+    }
+    .input-group {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    input[type="number"], input[type="text"] {
+      padding: 8px 12px;
+      border: 2px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 1rem;
+    }
+    input[type="number"] { width: 110px; }
+    input[type="text"] { width: 160px; }
+    
+    .unit-text {
+      font-weight: bold;
+      font-size: 1.05rem;
+      color: #333;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+    }
+    button {
+      padding: 10px 18px;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .submit-btn { background-color: #2563eb; }
+    .submit-btn:active { background-color: #1d4ed8; }
+    .reset-btn { background-color: #64748b; }
+    .reset-btn:active { background-color: #475569; }
+
+    #result-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+    .modal-content {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 340px;
+      width: 90%;
+    }
+    .modal-content p {
+      margin: 10px 0;
+      font-size: 1.05rem;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 일본 상징 배경 아이콘 -->
+  <div class="bg-decorations">
+    <span class="bg-icon" style="top: 5%; left: 5%;">🗻</span>
+    <span class="bg-icon" style="top: 10%; right: 8%;">⛩️</span>
+    <span class="bg-icon" style="top: 40%; left: 3%;">🌸</span>
+    <span class="bg-icon" style="top: 45%; right: 4%;">🏯</span>
+    <span class="bg-icon" style="bottom: 10%; left: 8%;">🍵</span>
+    <span class="bg-icon" style="bottom: 8%; right: 10%;">😸</span>
+  </div>
+
+  <!-- 시작 화면 모달 -->
+  <div id="start-screen">
+    <div class="start-card">
+      <h2>💴 일본 화폐 정리 게임</h2>
+      <p>바닥에 흩어진 일본 화폐를 종류별로 모아요! 화폐를 센 후 금액을 입력하고, 일본어로 어떻게 읽는지 입력하세요. 행운을 빕니다. がんばって！</p>
+      <button class="start-btn" onclick="startGame()">スタート</button>
+    </div>
+  </div>
+
+  <h1>💴 일본 화폐 정리 게임</h1>
+  <div id="status-bar">
+    <span>경과 시간: <span id="timer">00:00.0</span></span>
+  </div>
+
+  <!-- 흩어진 화폐 영역 -->
+  <div id="play-field">
+    <div class="field-bg-symbols">
+      <span>🗻</span>
+      <span>🌸</span>
+      <span>⛩️</span>
+    </div>
+  </div>
+
+  <!-- 화폐별 정리 상자 -->
+  <div id="drop-zones"></div>
+
+  <!-- 금액 입력 및 컨트롤 패널 -->
+  <div id="control-panel">
+    <!-- 숫자 입력 -->
+    <div class="input-group">
+      <input type="number" id="user-total" placeholder="숫자 입력">
+      <span class="unit-text">円(えん)</span>
+    </div>
+    
+    <!-- 일본어 입력 (요청하신 구문 수정) -->
+    <div class="input-group">
+      <input type="text" id="user-japanese" placeholder="일본어 입력">
+      <span class="unit-text">円（えん）に なります。</span>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="btn-group">
+      <button class="submit-btn" onclick="checkAnswer()">제출하기</button>
+      <button class="reset-btn" onclick="resetGame()">리셋</button>
+    </div>
+  </div>
+
+  <!-- 결과 알림 모달 -->
+  <div id="result-modal">
+    <div class="modal-content">
+      <h2 id="modal-title">🎉 성공!</h2>
+      <p id="modal-time"></p>
+      <p id="modal-jp-text"></p>
+      <br>
+      <button class="submit-btn" onclick="resetGame()">다시 하기</button>
+    </div>
+  </div>
+
+  <script>
+    const DENOMINATIONS = [
+      { value: 1, name: '1円', type: 'coin', class: 'coin-1', icon: '🌱' },
+      { value: 5, name: '5円', type: 'coin', class: 'coin-5', icon: '🌾' },
+      { value: 10, name: '10円', type: 'coin', class: 'coin-10', icon: '🏛️' },
+      { value: 50, name: '50円', type: 'coin', class: 'coin-50', icon: '🌼' },
+      { value: 100, name: '100円', type: 'coin', class: 'coin-100', icon: '🌸' },
+      { value: 500, name: '500円', type: 'coin', class: 'coin-500', icon: '🌿' },
+      { value: 1000, name: '1000円', type: 'bill', class: 'bill bill-1000', icon: '👨‍⚕️' },
+      { value: 2000, name: '2000円', type: 'bill', class: 'bill bill-2000', icon: '⛩️' },
+      { value: 5000, name: '5000円', type: 'bill', class: 'bill bill-5000', icon: '👩‍🏫' },
+      { value: 10000, name: '10000円', type: 'bill', class: 'bill bill-10000', icon: '👨‍💼' }
+    ];
+
+    let totalAmount = 0;
+    let totalItemCount = 0;
+    let startTime = null;
+    let timerInterval = null;
+    let activeMoney = null;
+    let offsetX = 0, offsetY = 0;
+
+    const playField = document.getElementById('play-field');
+    const dropZonesContainer = document.getElementById('drop-zones');
+    const timerDisplay = document.getElementById('timer');
+    const startScreen = document.getElementById('start-screen');
+
+    function startGame() {
+      startScreen.style.display = 'none';
+      initGame();
+    }
+
+    function initGame() {
+      const existingMoneys = playField.querySelectorAll('.money');
+      existingMoneys.forEach(m => m.remove());
+
+      dropZonesContainer.innerHTML = '';
+      totalAmount = 0;
+      totalItemCount = 0;
+      
+      document.getElementById('user-total').value = '';
+      document.getElementById('user-japanese').value = '';
+      document.getElementById('result-modal').style.display = 'none';
+
+      // 1. Drop Zone 생성 (카운터 제거됨)
+      DENOMINATIONS.forEach(denom => {
+        const zone = document.createElement('div');
+        zone.className = 'zone';
+        zone.dataset.value = denom.value;
+        zone.innerHTML = `
+          <div class="zone-header">
+            <span class="zone-label">${denom.name}</span>
+          </div>
+          <div class="zone-content"></div>
+        `;
+        dropZonesContainer.appendChild(zone);
+      });
+
+      // 2. 화폐 목록 생성 (10종류 모두 1개 이상 무조건 포함)
+      let moneyList = [...DENOMINATIONS];
+      const extraCount = Math.floor(Math.random() * 8) + 5;
+
+      for (let i = 0; i < extraCount; i++) {
+        moneyList.push(DENOMINATIONS[Math.floor(Math.random() * DENOMINATIONS.length)]);
+      }
+
+      totalItemCount = moneyList.length;
+
+      // 화폐 화면에 배치
+      moneyList.forEach(denom => {
+        totalAmount += denom.value;
+
+        const money = document.createElement('div');
+        money.className = `money ${denom.class}`;
+        money.dataset.value = denom.value;
+        
+        money.innerHTML = `
+          <span style="font-size: 1.1em; margin-bottom: 2px;">${denom.icon}</span>
+          <span style="font-size: 0.7em;">${denom.name}</span>
+        `;
+
+        const maxX = playField.clientWidth - 100;
+        const maxY = playField.clientHeight - 65;
+        money.style.left = `${Math.max(10, Math.floor(Math.random() * maxX))}px`;
+        money.style.top = `${Math.max(10, Math.floor(Math.random() * maxY))}px`;
+        
+        const zIndex = Math.floor(Math.random() * 100) + 20;
+        money.style.zIndex = zIndex;
+        money.dataset.baseZindex = zIndex;
+
+        money.addEventListener('mousedown', startDrag);
+        money.addEventListener('touchstart', startDrag, { passive: false });
+
+        playField.appendChild(money);
+      });
+
+      startTimer();
+    }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      startTime = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const seconds = Math.floor(elapsed / 1000);
+        const ms = Math.floor((elapsed % 1000) / 100);
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        timerDisplay.innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${ms}`;
+      }, 100);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+    }
+
+    function startDrag(e) {
+      e.preventDefault();
+      activeMoney = e.currentTarget;
+
+      if (activeMoney.classList.contains('in-zone')) {
+        activeMoney.classList.remove('in-zone');
+        playField.appendChild(activeMoney);
+      }
+
+      activeMoney.style.zIndex = 999999;
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const rect = activeMoney.getBoundingClientRect();
+
+      offsetX = clientX - rect.left;
+      offsetY = clientY - rect.top;
+
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('touchmove', onDrag, { passive: false });
+      document.addEventListener('mouseup', stopDrag);
+      document.addEventListener('touchend', stopDrag);
+    }
+
+    function onDrag(e) {
+      if (!activeMoney) return;
+      e.preventDefault();
+
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      const fieldRect = playField.getBoundingClientRect();
+
+      let x = clientX - fieldRect.left - offsetX;
+      let y = clientY - fieldRect.top - offsetY;
+
+      activeMoney.style.left = `${x}px`;
+      activeMoney.style.top = `${y}px`;
+    }
+
+    function stopDrag(e) {
+      if (!activeMoney) return;
+
+      const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+      const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+      const zones = document.querySelectorAll('.zone');
+      let droppedInZone = false;
+
+      zones.forEach(zone => {
+        const rect = zone.getBoundingClientRect();
+        if (
+          clientX >= rect.left && clientX <= rect.right &&
+          clientY >= rect.top && clientY <= rect.bottom
+        ) {
+          if (zone.dataset.value === activeMoney.dataset.value) {
+            zone.querySelector('.zone-content').appendChild(activeMoney);
+            activeMoney.classList.add('in-zone');
+            droppedInZone = true;
+          }
+        }
+      });
+
+      if (!droppedInZone && activeMoney.parentElement !== playField) {
+        playField.appendChild(activeMoney);
+      }
+
+      activeMoney.style.zIndex = activeMoney.dataset.baseZindex;
+
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('touchmove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      document.removeEventListener('touchend', stopDrag);
+      activeMoney = null;
+    }
+
+    function checkAnswer() {
+      const userValue = parseInt(document.getElementById('user-total').value, 10);
+      const userJpText = document.getElementById('user-japanese').value.trim();
+      const sortedCount = document.querySelectorAll('.money.in-zone').length;
+
+      if (sortedCount < totalItemCount) {
+        alert('아직 정리하지 않은 화폐가 남아있습니다! 화면의 모든 화폐를 알맞은 상자에 정리해주세요.');
+        return;
+      }
+
+      if (isNaN(userValue) || userValue === 0) {
+        alert('총 금액을 숫자로 입력해주세요.');
+        return;
+      }
+
+      if (userValue === totalAmount) {
+        stopTimer();
+        const clearTime = timerDisplay.innerText;
+        
+        document.getElementById('modal-time').innerText = `⏱️ 클리어 시간: ${clearTime}`;
+        if (userJpText) {
+          document.getElementById('modal-jp-text').innerText = `📝 입력한 일본어: ${userJpText}円（えん）に なります。`;
+        } else {
+          document.getElementById('modal-jp-text').innerText = ``;
+        }
+
+        document.getElementById('result-modal').style.display = 'flex';
+      } else {
+        alert('입력한 금액이 정확하지 않습니다. 다시 계산해 보세요!');
+      }
+    }
+
+    function resetGame() {
+      startScreen.style.display = 'flex';
+    }
+  </script>
+</body>
+</html>
