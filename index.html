@@ -134,16 +134,34 @@
       pointer-events: none;
     }
 
-    /* drop zones */
-    #drop-zones {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 10px;
+    /* drop zones 컨테이너 (모바일 가로 스크롤 지원) */
+    #drop-zones-wrapper {
       width: 100%;
       max-width: 900px;
+      overflow-x: auto;
       margin-bottom: 15px;
       z-index: 5;
+      padding-bottom: 6px;
+      touch-action: pan-x; /* 가로 스크롤 터치 허용 */
     }
+
+    /* 가로 스크롤바 디자인 */
+    #drop-zones-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+    #drop-zones-wrapper::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+
+    #drop-zones {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 8px;
+      min-width: 850px; /* 모바일에서도 상자가 찌그러지지 않도록 하한선 지정 */
+      width: 100%;
+    }
+
     .zone {
       background: #ffffff;
       border: 2px solid #cbd5e1;
@@ -323,7 +341,7 @@
   <div id="start-screen">
     <div class="start-card">
       <h2>💴 일본 화폐 정리 게임</h2>
-      <p>바닥에 흩어진 일본 화폐를 종류별로 모으고 총액을 쓰고 일본어로 입력하세요. 행운을 빕니다. がんばって！</p>
+      <p>바닥에 흩어진 일본 화폐를 종류별로 모으고 총액을 입력한 후 일본어로 입력하세요. 행운을 빕니다. がんばって！</p>
       <button class="start-btn" onclick="startGame()">スタート</button>
     </div>
   </div>
@@ -342,8 +360,10 @@
     </div>
   </div>
 
-  <!-- 화폐별 정리 상자 -->
-  <div id="drop-zones"></div>
+  <!-- 화폐별 정리 상자 (가로 스크롤 감싸기 추가) -->
+  <div id="drop-zones-wrapper">
+    <div id="drop-zones"></div>
+  </div>
 
   <!-- 금액 입력 및 컨트롤 패널 -->
   <div id="control-panel">
@@ -482,7 +502,7 @@
       const units = ["", "いち", "に", "さん", "よん", "ご", "ろく", "なな", "はち", "きゅう"];
       let result = "";
 
-      // 1. 만 단위 (万) -> 1만: いちまん / 4만: よんまん / 7만: ななまん / 9만: きゅうまん
+      // 1. 만 단위 (万)
       const man = Math.floor(num / 10000);
       let rem = num % 10000;
 
@@ -494,7 +514,7 @@
         else result += units[man] + "まん";
       }
 
-      // 2. 천 단위 (千) -> 1천: せん / 3천: さんぜん / 4천: よんせん / 7천: ななせん / 8천: はっせん / 9천: きゅうせん
+      // 2. 천 단위 (千)
       const sen = Math.floor(rem / 1000);
       rem = rem % 1000;
 
@@ -508,7 +528,7 @@
         else result += units[sen] + "せん";
       }
 
-      // 3. 백 단위 (百) -> 1백: ひゃく / 3백: さんびゃく / 4백: よんひゃく / 6백: ろっぴゃく / 7백: ななひゃく / 8백: はっぴゃく / 9백: きゅうひゃく
+      // 3. 백 단위 (百)
       const hyaku = Math.floor(rem / 100);
       rem = rem % 100;
 
@@ -523,7 +543,7 @@
         else result += units[hyaku] + "ひゃく";
       }
 
-      // 4. 십 단위 (十) -> 4십: よんじゅう / 7십: ななじゅう / 9십: きゅうじゅう
+      // 4. 십 단위 (十)
       const ju = Math.floor(rem / 10);
       const sho = rem % 10;
 
@@ -535,7 +555,7 @@
         else result += units[ju] + "じゅう";
       }
 
-      // 5. 일 단위 -> 4: よん / 7: なな / 9: きゅう
+      // 5. 일 단위
       if (sho > 0) {
         if (sho === 4) result += "よん";
         else if (sho === 7) result += "なな";
